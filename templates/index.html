@@ -1,0 +1,99 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello World & Calculator Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+
+        .calculator {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        input {
+            width: 80%;
+            padding: 10px;
+            margin: 8px;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hello World</h1>
+
+    <div class="calculator">
+        <h2>Calculator</h2>
+
+        <input type="number" id="a" placeholder="Enter first number">
+        <input type="number" id="b" placeholder="Enter second number">
+
+        <div>
+            <button onclick="calculate('add')">Add</button>
+            <button onclick="calculate('subtract')">Subtract</button>
+            <button onclick="calculate('multiply')">Multiply</button>
+            <button onclick="calculate('divide')">Divide</button>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function calculate(operation) {
+            const a = parseFloat(document.getElementById("a").value);
+            const b = parseFloat(document.getElementById("b").value);
+            const resultDiv = document.getElementById("result");
+
+            if (isNaN(a) || isNaN(b)) {
+                resultDiv.textContent = "Please enter both numbers.";
+                return;
+            }
+
+            try {
+                const response = await fetch("/" + operation, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ a: a, b: b })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    resultDiv.textContent = "Error: " + data.error;
+                    return;
+                }
+
+                resultDiv.textContent = "Result: " + data.result;
+
+            } catch (error) {
+                resultDiv.textContent = "Error: Unable to connect to the server.";
+            }
+        }
+    </script>
+</body>
+</html>
+```
