@@ -1,4 +1,3 @@
-
 FROM python:3.14-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -16,6 +15,9 @@ COPY requirements.txt .
 
 RUN python -m pip install --no-cache-dir --upgrade pip setuptools && \
     python -m pip install --no-cache-dir -r requirements.txt
+
+# Verify installed setuptools version
+RUN python -c "import setuptools; print('SETUPTOOLS_VERSION:', setuptools.__version__)"
 
 # Copy application files
 COPY . .
