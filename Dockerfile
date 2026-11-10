@@ -7,13 +7,14 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends curl gcc g++ && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY requirements.txt .
 
-RUN python -m pip install --no-cache-dir --upgrade pip setuptools && \
+RUN python -m pip install --no-cache-dir --upgrade pip "setuptools>=78.1.1" && \
     python -m pip install --no-cache-dir -r requirements.txt
 
 # Verify installed setuptools version
