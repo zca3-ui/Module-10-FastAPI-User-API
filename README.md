@@ -1,29 +1,35 @@
-# FastAPI Calculator with PostgreSQL and pgAdmin
+# Module 10 – FastAPI User API with PostgreSQL
 
 ## Project Overview
 
-This project is a web-based calculator application built with FastAPI and Python. It extends a basic calculator application by using Docker Compose to manage the application, PostgreSQL database, and pgAdmin database management interface.
+This project extends a FastAPI calculator application by implementing user management functionality using Python, SQLAlchemy, PostgreSQL, and Pydantic.
 
-The project demonstrates how a web application and relational database environment can be organized using containers. It also demonstrates fundamental SQL operations, including creating tables, inserting records, retrieving data, joining tables, updating records, and deleting records.
+The application supports user registration, secure password hashing, and retrieval of registered user information. Passwords are hashed using Argon2 before being stored in the PostgreSQL database. Pydantic schemas validate incoming user data and control the information returned through the API.
+
+The project also demonstrates relational database management, Docker containerization, automated testing, and continuous integration and deployment (CI/CD) using GitHub Actions.
 
 ## Technologies Used
 
-- **Python 3.14** – Programming language used for the application.
-- **FastAPI** – Web framework used to build the calculator API.
-- **PostgreSQL 16** – Relational database used to store users and calculations.
-- **pgAdmin 4** – Web-based interface for managing PostgreSQL databases.
-- **Docker** – Used to package and run the application in containers.
-- **Docker Compose** – Used to manage the application, database, and pgAdmin services.
-- **Pytest** – Used for automated testing.
-- **Playwright** – Used for end-to-end browser testing.
-- **GitHub Actions** – Used for continuous integration and automated testing.
-
+- **Python 3.14** – Programming language.
+- **FastAPI** – Web framework used to build the API.
+- **SQLAlchemy** – ORM used to interact with PostgreSQL.
+- **PostgreSQL 16** – Relational database.
+- **Pydantic** – Data validation and serialization.
+- **Argon2** – Secure password hashing algorithm.
+- **Docker** – Application containerization.
+- **Docker Compose** – Container orchestration.
+- **pgAdmin 4** – Database management interface.
+- **Pytest** – Automated testing framework.
+- **Playwright** – End-to-end browser testing.
+- **GitHub Actions** – Continuous integration and deployment.
+- **Trivy** – Docker image vulnerability scanning.
+- **Docker Hub** – Container image repository.
 
 ## Application Features
 
-### Calculator Application
+### Calculator API
 
-The FastAPI application provides the following calculator operations:
+The original calculator application provides:
 
 - Addition
 - Subtraction
@@ -31,22 +37,53 @@ The FastAPI application provides the following calculator operations:
 - Division
 - Division-by-zero error handling
 
-The application also includes a web interface built with HTML and JavaScript.
+### User Management API
 
-### Database Design
+The application includes user registration and retrieval endpoints.
 
-The PostgreSQL database is named `fastapi_db` and contains two relational tables.
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/users/register` | Register a new user |
+| GET | `/users/` | Retrieve all users |
+| GET | `/users/{user_id}` | Retrieve a user by ID |
 
-**Users Table**
+### Password Security
+
+User passwords are securely hashed using Argon2 before being stored in PostgreSQL.
+
+The application uses the `pwdlib` library to generate and verify password hashes.
+
+Plain-text passwords and password hashes are not included in API responses.
+
+### Data Validation
+
+Pydantic schemas validate user information before it is processed.
+
+The `UserCreate` schema validates:
+
+- Username length.
+- Email format.
+- Password length.
+
+The `UserRead` schema controls the user information returned by the API and excludes password hashes.
+
+## Database Design
+
+The PostgreSQL database is named `fastapi_db`.
+
+### Users Table
 
 | Column | Data Type | Description |
 |---|---|---|
 | id | SERIAL PRIMARY KEY | Unique user identifier |
-| username | VARCHAR(50) | User's username |
-| email | VARCHAR(100) | User's email address |
-| created_at | TIMESTAMP | Date and time the user was created |
+| username | VARCHAR(50) | Unique username |
+| email | VARCHAR(100) | Unique email address |
+| password_hash | VARCHAR(255) | Securely hashed password |
+| created_at | TIMESTAMP | Account creation timestamp |
 
-**Calculations Table**
+Both username and email have unique constraints to prevent duplicate registrations.
+
+### Calculations Table
 
 | Column | Data Type | Description |
 |---|---|---|
@@ -55,12 +92,12 @@ The PostgreSQL database is named `fastapi_db` and contains two relational tables
 | operand_a | FLOAT | First operand |
 | operand_b | FLOAT | Second operand |
 | result | FLOAT | Calculation result |
-| timestamp | TIMESTAMP | Date and time of calculation |
+| timestamp | TIMESTAMP | Calculation timestamp |
 | user_id | INTEGER | References the associated user |
 
-The `calculations` table contains a foreign key referencing `users(id)`. This establishes a one-to-many relationship because one user can have multiple calculations.
+The calculations table has a foreign key referencing `users(id)`, establishing a one-to-many relationship between users and calculations.
 
-The foreign key uses `ON DELETE CASCADE`, meaning calculations associated with a deleted user are automatically deleted as well.
+The foreign key uses `ON DELETE CASCADE`.
 
 ## Running the Project with Docker Compose
 
@@ -70,36 +107,30 @@ Install the following before running the project:
 
 - Docker Desktop
 - Docker Compose
-- Git (if cloning the repository)
+- Git
 
 ### 1. Clone the repository
 
 ```bash
-git clone YOUR_GITHUB_REPOSITORY_URL
-cd fastapi-postgresql-assignment
+git clone https://github.com/zca3-ui/Module-10-FastAPI-User-API.git
+cd Module-10-FastAPI-User-API
 ```
 
-Replace `YOUR_GITHUB_REPOSITORY_URL` with the actual URL of your GitHub repository.
-
 ### 2. Build and start the containers
-
-Run:
 
 ```bash
 docker compose up --build -d
 ```
 
-This command builds the FastAPI application image and starts the three services:
+This command builds the FastAPI application image and starts the three services.
 
 | Service | Purpose | Port |
 |---|---|---|
-| web | FastAPI calculator application | 8000 |
+| web | FastAPI application | 8000 |
 | db | PostgreSQL database | 5432 |
 | pgadmin | Database management interface | 5050 |
 
 ### 3. Verify the containers
-
-Run:
 
 ```bash
 docker compose ps
@@ -109,7 +140,7 @@ Confirm that the application, PostgreSQL, and pgAdmin containers are running.
 
 ### 4. Access the application
 
-- Calculator application: http://localhost:8000
+- Calculator: http://localhost:8000
 - FastAPI API documentation: http://localhost:8000/docs
 - Health endpoint: http://localhost:8000/health
 - pgAdmin: http://localhost:5050
@@ -138,17 +169,17 @@ Register a PostgreSQL server using the following connection information:
 
 The hostname is `db` because pgAdmin and PostgreSQL communicate through the Docker Compose network.
 
-## Running the SQL Scripts
+## Database Initialization and SQL Scripts
 
 The SQL scripts are located in the `sql/` directory.
 
-Execute them through the pgAdmin Query Tool in the following order:
+Execute the scripts in the following order when setting up a fresh database:
 
 ### 1. Create the database tables
 
 File: `sql/01_schema.sql`
 
-Creates the `users` and `calculations` tables, including the primary key and foreign key relationships.
+Creates the `users` and `calculations` tables, including their primary keys and foreign key relationship.
 
 ### 2. Insert sample data
 
@@ -169,74 +200,70 @@ Demonstrates:
 - UPDATE statements to modify calculation records.
 - DELETE statements to remove calculation records.
 
-These scripts demonstrate the database operations performed for the assignment.
+### 4. Add password hashing support
 
-## Running Automated Tests
+File: `sql/04_add_password_hash.sql`
 
-The project includes unit, integration, and end-to-end tests.
+Adds the `password_hash` column to the existing users table.
 
-### Install dependencies
+Existing users will have a NULL password hash until they register a password through the API.
 
-Create and activate a Python virtual environment, then run:
+## Running Automated Tests Locally
+
+The project includes unit tests, integration tests, and end-to-end tests.
+
+### 1. Navigate to the project directory
 
 ```bash
+cd Module-10-FastAPI-User-API
+```
+
+### 2. Create and activate a virtual environment
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Install the Playwright browser
+### 4. Start PostgreSQL
+
+The integration tests require a running PostgreSQL database.
+
+If using Docker Compose, start the database:
+
+```bash
+docker compose up -d db
+```
+
+The tests use the following default local database connection:
+
+```text
+postgresql+psycopg://postgres:postgres@localhost:5432/fastapi_db
+```
+
+### 5. Initialize the database
+
+Run the following commands to create the database tables and add the password hash column:
+
+```bash
+docker exec -i postgres_db psql -U postgres -d fastapi_db < sql/01_schema.sql
+```
+
+```bash
+docker exec -i postgres_db psql -U postgres -d fastapi_db < sql/04_add_password_hash.sql
+```
+
+### 6. Install the Playwright browser
 
 ```bash
 playwright install chromium
 ```
 
-### Run unit tests
-
-```bash
-pytest tests/unit/ -v
-```
-
-### Run integration tests
-
-```bash
-pytest tests/integration/ -v
-```
-
-### Run end-to-end tests
-
-```bash
-pytest tests/e2e/ -v
-```
-
-### Run the complete test suite
-
-```bash
-pytest -v
-```
-
-## Continuous Integration
-
-The project includes a GitHub Actions workflow located at:
-
-`.github/workflows/test.yml`
-
-The workflow is configured to run automated tests when changes are pushed to the main branch or when a pull request targets the main branch. It also includes a Docker image security scanning job.
-
-## Stopping the Containers
-
-To stop the running services while preserving the database volumes, run:
-
-```bash
-docker compose down
-```
-
-To stop the services and remove the database and pgAdmin volumes, run:
-
-```bash
-docker compose down -v
-```
-
-
-
-## Conclusion
-
-This project demonstrates the use of FastAPI, PostgreSQL, pgAdmin, Docker, and Docker Compose in a containerized application environment. It provides practical experience with relational database design, primary and foreign keys, one-to-many relationships, SQL CRUD operations, API development, and automated software testing.
+###
