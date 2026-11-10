@@ -1,4 +1,4 @@
-
+from app.routes.users import router as users_router
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -21,6 +21,9 @@ app = FastAPI(
 
 # Configure HTML templates
 templates = Jinja2Templates(directory="templates")
+
+# Register user management routes
+app.include_router(users_router)
 
 
 # Request model

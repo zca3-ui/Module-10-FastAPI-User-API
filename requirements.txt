@@ -8,3 +8,13 @@ pytest-cov
 httpx
 requests
 playwright
+
+# Database and ORM
+sqlalchemy
+psycopg[binary]
+
+# Password hashing
+pwdlib[argon2]
+
+# Email validation
+email-validator

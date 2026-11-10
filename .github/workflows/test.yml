@@ -7,10 +7,21 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
+
+  # ==========================================
+  # JOB 1: RUN AUTOMATED TESTS
+  # ==========================================
+
   test:
     name: Run Python Tests
     runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/fastapi_db
 
     services:
       postgres:
@@ -42,6 +53,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Initialize PostgreSQL database
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d fastapi_db \
+            -v ON_ERROR_STOP=1 -f sql/01_schema.sql
+
+          psql -h localhost -U postgres -d fastapi_db \
+            -v ON_ERROR_STOP=1 -f sql/04_add_password_hash.sql
+
       - name: Install Playwright browser
         run: |
           playwright install --with-deps chromium
@@ -71,8 +92,12 @@ jobs:
           name: pytest-results
           path: test-results/
 
-  docker-build:
-    name: Build Docker Image
+  # ==========================================
+  # JOB 2: BUILD, SCAN, AND DEPLOY DOCKER IMAGE
+  # ==========================================
+
+  docker-build-scan-deploy:
+    name: Build, Scan, and Deploy Docker Image
     needs: test
     runs-on: ubuntu-latest
 
@@ -81,4 +106,42 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: docker build -t fastapi-calculator:latest .
+        run: |
+          docker build \
+            -t fastapi-user-api:${{ github.sha }} \
+            -t fastapi-user-api:latest \
+            .
+
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: fastapi-user-api:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Tag Docker image for Docker Hub
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker tag fastapi-user-api:latest \
+            ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-user-api:latest
+
+          docker tag fastapi-user-api:${{ github.sha }} \
+            ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-user-api:${{ github.sha }}
+
+      - name: Push Docker image to Docker Hub
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-user-api:latest
+
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-user-api:${{ github.sha }}
